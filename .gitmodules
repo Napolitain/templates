@@ -1,0 +1,24 @@
+[submodule "template-ada"]
+	path = template-ada
+	url = https://github.com/Napolitain/template-ada
+	branch = main
+[submodule "template-cpp"]
+	path = template-cpp
+	url = https://github.com/Napolitain/template-cpp
+	branch = main
+[submodule "template-go"]
+	path = template-go
+	url = https://github.com/Napolitain/template-go
+	branch = main
+[submodule "template-python"]
+	path = template-python
+	url = https://github.com/Napolitain/template-python
+	branch = main
+[submodule "template-rust"]
+	path = template-rust
+	url = https://github.com/Napolitain/template-rust
+	branch = main
+[submodule "template-zig"]
+	path = template-zig
+	url = https://github.com/Napolitain/template-zig
+	branch = main
