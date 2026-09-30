@@ -4,7 +4,7 @@ Opinionated, minimal project templates, one repository per language, collected h
 
 | Template | Stack | Coverage | Mutation testing |
 |---|---|---|---|
-| [template-ada](https://github.com/Napolitain/template-ada) | Ada 2022, Alire, GNAT, AUnit, GNATformat | GNATcoverage | |
+| [template-ada](https://github.com/Napolitain/template-ada) | Ada 2022 + SPARK (gnatprove), Alire, GNAT, AUnit, GNATformat | GNATcoverage | |
 | [template-cpp](https://github.com/Napolitain/template-cpp) | C++26, clang, CMake presets, FetchContent, GoogleTest, clang-tidy, cppcheck | llvm-cov | |
 | [template-go](https://github.com/Napolitain/template-go) | Go, gofumpt, go vet, golangci-lint, deadcode | go test -cover | gremlins |
 | [template-python](https://github.com/Napolitain/template-python) | Python, uv, ruff, ty, pytest | pytest-cov | mutmut |
