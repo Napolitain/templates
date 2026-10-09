@@ -22,3 +22,7 @@
 	path = template-zig
 	url = https://github.com/Napolitain/template-zig
 	branch = main
+[submodule "template-svelte"]
+	path = template-svelte
+	url = https://github.com/Napolitain/template-svelte
+	branch = main
