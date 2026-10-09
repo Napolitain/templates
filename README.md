@@ -16,6 +16,22 @@ Shared conventions: hooks via [prek](https://prek.j178.dev) with every available
 
 To start a project, use a template directly (`gh repo create my-app --template Napolitain/template-go`), not this repository.
 
+Complexity limits run through each template's existing lint hooks and CI. Where supported,
+the maximum is 10 for cyclomatic complexity and 15 for cognitive complexity; violations
+require refactoring. Algorithms differ between tools, so scores are not directly comparable.
+
+| Template | Cyclomatic | Cognitive |
+|---|---|---|
+| Go | `cyclop`: 10 | `gocognit`: 15 |
+| Python | Ruff `C901`: 10 | Not provided by Ruff |
+| Rust | No separate Clippy rule | Clippy `cognitive_complexity`: 15 (Clippy-specific heuristic) |
+| C++ | No configured gate | clang-tidy `readability-function-cognitive-complexity`: 15 |
+| Svelte / TypeScript | ESLint `complexity`: 10 | SonarJS `cognitive-complexity`: 15 (script functions, not template markup) |
+| Ada / Zig | Not configured in the current toolchains | Not configured in the current toolchains |
+
+Ada's GNATcheck offers a cyclomatic-complexity rule, but is not supplied by the current
+Alire dependencies/index. Zig currently uses compiler checks and `zig fmt`.
+
 ```sh
 git clone --recurse-submodules https://github.com/Napolitain/templates
 git submodule update --remote    # move every submodule to its latest main
