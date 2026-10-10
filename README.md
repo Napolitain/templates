@@ -16,6 +16,19 @@ Shared conventions: hooks via [prek](https://prek.j178.dev) with every available
 
 To start a project, use a template directly (`gh repo create my-app --template Napolitain/template-go`), not this repository.
 
+Each template includes an optional Nix development shell using
+`github:NixOS/nixpkgs/nixpkgs-unstable`. Installing tools directly on NixOS remains
+supported; Nix is not required by the hooks or CI. From a template directory:
+
+```sh
+nix develop --command "$SHELL"       # keep your shell, aliases and prompt
+nix flake update nixpkgs             # refresh the lock to latest unstable
+```
+
+Re-enter the shell after updating. Each template owns its flake and lock file,
+so it works independently when used to create a project. See its README for
+platform support and toolchain details.
+
 Complexity limits run through each template's existing lint hooks and CI. Where supported,
 the maximum is 10 for cyclomatic complexity and 15 for cognitive complexity; violations
 require refactoring. Algorithms differ between tools, so scores are not directly comparable.
