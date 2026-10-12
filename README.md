@@ -1,5 +1,7 @@
 # templates
 
+See [AGENTS.md](AGENTS.md) for the working, verification, performance and commit policies.
+
 Opinionated, minimal project templates, one repository per language, collected here as git submodules.
 
 | Template | Stack | Coverage | Mutation testing |
