@@ -49,3 +49,43 @@ Alire dependencies/index. Zig currently uses compiler checks and `zig fmt`.
 git clone --recurse-submodules https://github.com/Napolitain/templates
 git submodule update --remote    # move every submodule to its latest main
 ```
+
+## Profile-guided optimization
+
+PGO is opt-in. Follow the commands in each template's README after replacing the
+starter with your application and choosing a training workload.
+
+| Template | Instrumentation PGO | Sampling PGO / AutoFDO | Propeller / relinking |
+|---|---|---|---|
+| [C++](template-cpp/README.md#profile-guided-optimization) | Clang generate/use presets | Clang supports it; external Linux profiling/conversion tools required | External experiment; no supplied workflow |
+| [Rust](template-rust/README.md#profile-guided-optimization) | Stable rustc generate/merge/use commands | No supported stable workflow here | No supplied workflow |
+| [Go](template-go/README.md#profile-guided-optimization) | Not used by the Go compiler's PGO workflow | Go CPU pprof profiles, explicit `-pgo` | Not supported by this template's linker workflow |
+| [Ada](template-ada/README.md#profile-guided-optimization) | GCC-based GNAT generate/use commands | GCC AutoFDO requires a separately configured toolchain/converter | No supplied workflow |
+| [Zig](template-zig/README.md#profile-guided-optimization) | No supported Zig-source workflow | No supported workflow | No supplied workflow |
+| [Python](template-python/README.md#profile-guided-optimization) | Interpreter build option, not a Python-package build mode | No application build workflow | Interpreter-level tooling only |
+| [Svelte / TypeScript](template-svelte/README.md#profile-guided-optimization) | No Vite application build mode | No application profile-use mode | Not applicable to the emitted JS/CSS |
+
+The greeting examples only verify that profile collection and consumption work.
+Train on realistic input sizes, hot paths, error rates and concurrency, in their
+expected proportions. Unit tests and coverage profiles are not representative
+performance profiles. Let instrumented processes exit normally to flush counters;
+long-running services need their profiler's explicit flush/stop mechanism.
+
+Keep the source revision, compiler, target, CPU flags, dependency lock and workload
+fixed between generation and use. Start fresh when these change; never merge
+profiles from incompatible binaries. Record those inputs alongside retained
+profiles. Scratch profiles live under ignored build directories and are not
+required by normal builds, hooks or CI.
+
+Check correctness again after rebuilding. Benchmark the baseline and optimized
+release binaries on the same machine with warmups and repeated runs, using a
+separate representative evaluation workload. Compare elapsed time or throughput,
+tail latency where relevant, memory and binary size; retain PGO only when it helps.
+Native CPU defaults constrain which machines can run these binaries. No speedup
+is claimed for the greeting programs.
+
+[Propeller](https://github.com/google/llvm-propeller) additionally needs compatible
+Clang/LLD, a binary with basic-block address maps, hardware branch sampling and a
+profile converter producing compiler and linker layout profiles. An LLVM backend
+or LTO alone does not establish support. These templates do not ship an unverified
+relinking preset; assess that separately on the intended OS, CPU and toolchain.
