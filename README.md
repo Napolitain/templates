@@ -84,6 +84,81 @@ tail latency where relevant, memory and binary size; retain PGO only when it hel
 Native CPU defaults constrain which machines can run these binaries. No speedup
 is claimed for the greeting programs.
 
+### Keeping builds with and without PGO
+
+The recipes retain two release binaries; neither is the instrumented training
+binary. Paths below are relative to the corresponding template directory:
+
+| Template | Without PGO | With PGO |
+|---|---|---|
+| C++ | `cmake --preset pgo-baseline` then `cmake --build --preset pgo-baseline`; `build/pgo-baseline/template_example` | `pgo-use` configure/build presets; `build/pgo-use/template_example` |
+| Rust | Baseline recipe without `-Cprofile-use`; `target/pgo-baseline/<host>/release/template` | Profile-use recipe; `target/pgo-use/<host>/release/template` |
+| Go | `go build -pgo=off -o bin/pgo/baseline ./cmd/template-go` | `go build -pgo="$PWD/bin/pgo/cpu.pprof" -o bin/pgo/optimized ./cmd/template-go` |
+| Ada | `alr build --release -- -f --subdirs=pgo-baseline`; `bin/pgo-baseline/template` | Profile-use recipe; `bin/pgo/template` |
+
+Follow each README's collection/merge steps before building with PGO. Default
+builds stay unchanged, and the baseline remains available as a fallback.
+
+### Checking benefits and costs
+
+No finite benchmark proves that PGO has no disadvantages for every possible
+input or machine. It changes optimization choices, and improving a hot path can
+come at the expense of another path or code size. Instrumentation adds overhead
+to training runs; collecting profiles, rebuilding and refreshing them also cost
+time and storage. Measure the final profile-use binary, not the instrumented one.
+
+Use this comparison process for each application:
+
+1. Build both variants from the same source and dependencies with identical
+   release, LTO and CPU settings, changing only PGO. Record the compiler, revision,
+   hardware, flags, profile identity and workload inputs with the results.
+2. Train on typical work, then evaluate on separate inputs covering common paths,
+   large inputs, error cases and expected concurrency. Check identical results and
+   run correctness tests for both builds.
+3. Measure repeated runs on a quiet machine, alternate which variant runs first,
+   and separate cold-start tests from warmed-up steady-state tests. Save individual
+   timings; investigate variation rather than assuming a small mean difference is
+   real. For services, measure throughput and tail latency under the same load.
+4. Compare each workload, peak memory, binary size, build time and training cost.
+   A weighted average can summarize the expected traffic mix, but must not hide a
+   regression on a critical workload.
+5. Set tolerances before measuring. Select PGO only when a repeatable improvement
+   exceeds measurement noise and important workloads remain within their limits.
+   Keep the baseline if results are inconclusive; repeat after compiler, workload
+   or significant source changes. This validates the tested cases, not all inputs.
+
+For example, after building the C++ variants, run from `template-cpp/`:
+
+```sh
+hyperfine --warmup 5 --runs 30 --export-json build/pgo/comparison.json \
+    './build/pgo-baseline/template_example' './build/pgo-use/template_example'
+hyperfine --warmup 5 --runs 30 --export-json build/pgo/comparison-reversed.json \
+    './build/pgo-use/template_example' './build/pgo-baseline/template_example'
+```
+
+Replace both greeting commands with the same meaningful application workload.
+These commands collect timings; they do not automatically certify a performance
+win. For elapsed time, report `100 * (baseline - pgo) / baseline` as percent time
+saved. This differs from percent throughput gained; label the measured metric.
+
+### Performance expectations
+
+Published results give context, not a promise for a new project:
+
+- [Go's PGO guide](https://go.dev/doc/pgo) reports about 2-14% performance
+  improvement across its representative benchmark set as of Go 1.22.
+- [The Rust project](https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/)
+  reports 15-20% performance wins for PGO builds of rust-analyzer. That is one
+  substantial application, not a general guarantee for Rust programs.
+
+These are examples of gains from a few percent to the low double digits. A new
+application can see no measurable gain or a regression; there is no defensible
+universal percentage for C++, Rust or Ada. Work dominated by I/O or waiting may
+show little wall-clock benefit even when CPU work improves. The starter greetings
+are too short and unrepresentative to estimate an application-level gain.
+
+### Sampling and relinking
+
 [Propeller](https://github.com/google/llvm-propeller) additionally needs compatible
 Clang/LLD, a binary with basic-block address maps, hardware branch sampling and a
 profile converter producing compiler and linker layout profiles. An LLVM backend
