@@ -52,115 +52,52 @@ git submodule update --remote    # move every submodule to its latest main
 
 ## Profile-guided optimization
 
-PGO is opt-in. Follow the commands in each template's README after replacing the
-starter with your application and choosing a training workload.
+Profile optimization is opt-in; keep an ordinary release baseline and select a
+mode supported by your template. Each linked README contains runnable commands.
 
-| Template | Instrumentation PGO | Sampling PGO / AutoFDO | Propeller / relinking |
-|---|---|---|---|
-| [C++](template-cpp/README.md#profile-guided-optimization) | Clang generate/use presets | Clang supports it; external Linux profiling/conversion tools required | External experiment; no supplied workflow |
-| [Rust](template-rust/README.md#profile-guided-optimization) | Stable rustc generate/merge/use commands | No supported stable workflow here | No supplied workflow |
-| [Go](template-go/README.md#profile-guided-optimization) | Not used by the Go compiler's PGO workflow | Go CPU pprof profiles, explicit `-pgo` | Not supported by this template's linker workflow |
-| [Ada](template-ada/README.md#profile-guided-optimization) | GCC-based GNAT generate/use commands | GCC AutoFDO requires a separately configured toolchain/converter | No supplied workflow |
-| [Zig](template-zig/README.md#profile-guided-optimization) | No supported Zig-source workflow | No supported workflow | No supplied workflow |
-| [Python](template-python/README.md#profile-guided-optimization) | Interpreter build option, not a Python-package build mode | No application build workflow | Interpreter-level tooling only |
-| [Svelte / TypeScript](template-svelte/README.md#profile-guided-optimization) | No Vite application build mode | No application profile-use mode | Not applicable to the emitted JS/CSS |
-
-The greeting examples only verify that profile collection and consumption work.
-Train on realistic input sizes, hot paths, error rates and concurrency, in their
-expected proportions. Unit tests and coverage profiles are not representative
-performance profiles. Let instrumented processes exit normally to flush counters;
-long-running services need their profiler's explicit flush/stop mechanism.
-
-Keep the source revision, compiler, target, CPU flags, dependency lock and workload
-fixed between generation and use. Start fresh when these change; never merge
-profiles from incompatible binaries. Record those inputs alongside retained
-profiles. Scratch profiles live under ignored build directories and are not
-required by normal builds, hooks or CI.
-
-Check correctness again after rebuilding. Benchmark the baseline and optimized
-release binaries on the same machine with warmups and repeated runs, using a
-separate representative evaluation workload. Compare elapsed time or throughput,
-tail latency where relevant, memory and binary size; retain PGO only when it helps.
-Native CPU defaults constrain which machines can run these binaries. No speedup
-is claimed for the greeting programs.
-
-### Keeping builds with and without PGO
-
-The recipes retain two release binaries; neither is the instrumented training
-binary. Paths below are relative to the corresponding template directory:
-
-| Template | Without PGO | With PGO |
+| Template | Easy path | Sampling / code layout |
 |---|---|---|
-| C++ | `cmake --preset pgo-baseline` then `cmake --build --preset pgo-baseline`; `build/pgo-baseline/template_example` | `pgo-use` configure/build presets; `build/pgo-use/template_example` |
-| Rust | Baseline recipe without `-Cprofile-use`; `target/pgo-baseline/<host>/release/template` | Profile-use recipe; `target/pgo-use/<host>/release/template` |
-| Go | `go build -pgo=off -o bin/pgo/baseline ./cmd/template-go` | `go build -pgo="$PWD/bin/pgo/cpu.pprof" -o bin/pgo/optimized ./cmd/template-go` |
-| Ada | `alr build --release -- -f --subdirs=pgo-baseline`; `bin/pgo-baseline/template` | Profile-use recipe; `bin/pgo/template` |
+| [C++](template-cpp/README.md#profile-guided-optimization) | `tools/perf-build baseline` / `pgo -- ./train.sh` | `autofdo`, `propeller`, `propeller-pgo`, `propeller-autofdo`; Linux perf + LLVM |
+| [Rust](template-rust/README.md#profile-guided-optimization) | `tools/perf-build baseline` / `pgo -- ./train.sh` | Instrumentation PGO; no stable AutoFDO/Propeller template mode |
+| [Ada](template-ada/README.md#profile-guided-optimization) | `tools/perf-build baseline` / `pgo -- ./train.sh` | GNAT instrumentation; no supplied AutoFDO/Propeller mode |
+| [Go](template-go/README.md#profile-guided-optimization) | Explicit `go build -pgo=off` / `-pgo=cpu.pprof` | Native sampled CPU pprof; no LLVM/Propeller mode |
+| [Zig](template-zig/README.md#profile-guided-optimization) | Release full LTO | No supported Zig-source PGO workflow |
+| [Python](template-python/README.md#profile-guided-optimization), [Svelte](template-svelte/README.md#profile-guided-optimization) | Normal app builds | No application PGO/Propeller build mode |
 
-Follow each README's collection/merge steps before building with PGO. Default
-builds stay unchanged, and the baseline remains available as a fallback.
+C++, Rust and Zig release builds retain full/fat LTO; Ada retains GCC LTO
+(`-flto=auto` selects parallelism, not ThinLTO). LTO does not itself provide PGO.
+The helpers require an executable workload driver, called with the training binary
+as its last argument. In `train.sh`, run `"$1"` with your application's realistic
+inputs. Instrumented processes must exit normally to flush profiles. All profiles
+and optimized outputs stay in ignored build directories; normal builds need none.
 
-### Checking benefits and costs
+### Compare before adopting
 
-No finite benchmark proves that PGO has no disadvantages for every possible
-input or machine. It changes optimization choices, and improving a hot path can
-come at the expense of another path or code size. Instrumentation adds overhead
-to training runs; collecting profiles, rebuilding and refreshing them also cost
-time and storage. Measure the final profile-use binary, not the instrumented one.
+1. Train on typical inputs and concurrency; evaluate on **separate** representative
+   inputs, including important cold/error paths. The greetings only test the pipeline.
+2. Keep source, compiler, dependencies, LTO and CPU flags fixed. Check correctness
+   of the final optimized binary. Retrain after those inputs or the workload change.
+3. Compare baseline/optimized time or throughput with warmups and repeated runs;
+   reverse their order too. Check tail latency, peak memory, binary size and build cost.
+4. Retain the baseline if a critical workload regresses or gains fall within noise.
+   No benchmark proves there are no disadvantages for every possible workload.
 
-Use this comparison process for each application:
-
-1. Build both variants from the same source and dependencies with identical
-   release, LTO and CPU settings, changing only PGO. Record the compiler, revision,
-   hardware, flags, profile identity and workload inputs with the results.
-2. Train on typical work, then evaluate on separate inputs covering common paths,
-   large inputs, error cases and expected concurrency. Check identical results and
-   run correctness tests for both builds.
-3. Measure repeated runs on a quiet machine, alternate which variant runs first,
-   and separate cold-start tests from warmed-up steady-state tests. Save individual
-   timings; investigate variation rather than assuming a small mean difference is
-   real. For services, measure throughput and tail latency under the same load.
-4. Compare each workload, peak memory, binary size, build time and training cost.
-   A weighted average can summarize the expected traffic mix, but must not hide a
-   regression on a critical workload.
-5. Set tolerances before measuring. Select PGO only when a repeatable improvement
-   exceeds measurement noise and important workloads remain within their limits.
-   Keep the baseline if results are inconclusive; repeat after compiler, workload
-   or significant source changes. This validates the tested cases, not all inputs.
-
-For example, after building the C++ variants, run from `template-cpp/`:
+From `template-cpp/`, with an executable `evaluate.sh` accepting the binary path:
 
 ```sh
-hyperfine --warmup 5 --runs 30 --export-json build/pgo/comparison.json \
-    './build/pgo-baseline/template_example' './build/pgo-use/template_example'
-hyperfine --warmup 5 --runs 30 --export-json build/pgo/comparison-reversed.json \
-    './build/pgo-use/template_example' './build/pgo-baseline/template_example'
+hyperfine --warmup 3 --runs 20 --export-json build/pgo/comparison.json \
+    './evaluate.sh ./build/pgo-baseline/template_example' \
+    './evaluate.sh ./build/autofdo-use/template_example'
+perf stat -r 5 -e cycles,instructions,branches,branch-misses -- \
+    ./evaluate.sh ./build/autofdo-use/template_example
 ```
 
-Replace both greeting commands with the same meaningful application workload.
-These commands collect timings; they do not automatically certify a performance
-win. For elapsed time, report `100 * (baseline - pgo) / baseline` as percent time
-saved. This differs from percent throughput gained; label the measured metric.
+Run the counters on both variants. `perf stat` measures; AutoFDO/Propeller use
+`perf record` and converted profiles to change the build. Percent time saved is
+`100 * (baseline - optimized) / baseline`.
 
-### Performance expectations
-
-Published results give context, not a promise for a new project:
-
-- [Go's PGO guide](https://go.dev/doc/pgo) reports about 2-14% performance
-  improvement across its representative benchmark set as of Go 1.22.
-- [The Rust project](https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/)
-  reports 15-20% performance wins for PGO builds of rust-analyzer. That is one
-  substantial application, not a general guarantee for Rust programs.
-
-These are examples of gains from a few percent to the low double digits. A new
-application can see no measurable gain or a regression; there is no defensible
-universal percentage for C++, Rust or Ada. Work dominated by I/O or waiting may
-show little wall-clock benefit even when CPU work improves. The starter greetings
-are too short and unrepresentative to estimate an application-level gain.
-
-### Sampling and relinking
-
-[Propeller](https://github.com/google/llvm-propeller) additionally needs compatible
-Clang/LLD, a binary with basic-block address maps, hardware branch sampling and a
-profile converter producing compiler and linker layout profiles. An LLVM backend
-or LTO alone does not establish support. These templates do not ship an unverified
-relinking preset; assess that separately on the intended OS, CPU and toolchain.
+**Ballpark:** gains can range from none (or regressions) to low double digits.
+[Go documents 2–14%](https://go.dev/doc/pgo) for its representative benchmark set
+as of Go 1.22; [Rust reports 15–20% for rust-analyzer](https://blog.rust-lang.org/2025/09/10/rust-compiler-performance-survey-2025-results/).
+These are application examples, not predictions; PGO, AutoFDO and Propeller gains
+are not additive. I/O-bound work may see little wall-clock improvement.
