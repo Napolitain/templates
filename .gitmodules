@@ -26,3 +26,7 @@
 	path = template-svelte
 	url = https://github.com/Napolitain/template-svelte
 	branch = main
+[submodule "template-angular"]
+	path = template-angular
+	url = https://github.com/lab34/template-angular
+	branch = main

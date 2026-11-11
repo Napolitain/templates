@@ -6,6 +6,7 @@ Opinionated, minimal project templates, one repository per language, collected h
 
 | Template | Stack | Coverage | Mutation testing |
 |---|---|---|---|
+| [template-angular](https://github.com/lab34/template-angular) | Angular 22, TypeScript (zoneless), Tailwind CSS, pnpm, ESLint, Prettier, Playwright | Vitest V8 | |
 | [template-ada](https://github.com/Napolitain/template-ada) | Ada 2022 + SPARK (gnatprove), Alire, GNAT, AUnit, GNATformat | GNATcoverage | |
 | [template-cpp](https://github.com/Napolitain/template-cpp) | C++26, clang, CMake presets, FetchContent, GoogleTest, clang-tidy, cppcheck | llvm-cov | |
 | [template-go](https://github.com/Napolitain/template-go) | Go, gofumpt, go vet, golangci-lint, deadcode | go test -cover | gremlins |
@@ -41,7 +42,7 @@ require refactoring. Algorithms differ between tools, so scores are not directly
 | Python | Ruff `C901`: 10 | Not provided by Ruff |
 | Rust | No separate Clippy rule | Clippy `cognitive_complexity`: 15 (Clippy-specific heuristic) |
 | C++ | No configured gate | clang-tidy `readability-function-cognitive-complexity`: 15 |
-| Svelte / TypeScript | ESLint `complexity`: 10 | SonarJS `cognitive-complexity`: 15 (script functions, not template markup) |
+| Svelte / TypeScript / Angular | ESLint `complexity`: 10 | SonarJS `cognitive-complexity`: 15 (script functions, not template markup) |
 | Ada / Zig | Not configured in the current toolchains | Not configured in the current toolchains |
 
 Ada's GNATcheck offers a cyclomatic-complexity rule, but is not supplied by the current
@@ -64,7 +65,7 @@ mode supported by your template. Each linked README contains runnable commands.
 | [Ada](template-ada/README.md#profile-guided-optimization) | `tools/perf-build baseline` / `pgo -- ./train.sh` | GNAT instrumentation; no supplied AutoFDO/Propeller mode |
 | [Go](template-go/README.md#profile-guided-optimization) | Explicit `go build -pgo=off` / `-pgo=cpu.pprof` | Native sampled CPU pprof; no LLVM/Propeller mode |
 | [Zig](template-zig/README.md#profile-guided-optimization) | Release full LTO | No supported Zig-source PGO workflow |
-| [Python](template-python/README.md#profile-guided-optimization), [Svelte](template-svelte/README.md#profile-guided-optimization) | Normal app builds | No application PGO/Propeller build mode |
+| [Python](template-python/README.md#profile-guided-optimization), [Svelte](template-svelte/README.md#profile-guided-optimization), [Angular](template-angular/README.md#profile-guided-optimization) | Normal app builds | No application PGO/Propeller build mode |
 
 C++, Rust and Zig release builds retain full/fat LTO; Ada retains GCC LTO
 (`-flto=auto` selects parallelism, not ThinLTO). LTO does not itself provide PGO.
